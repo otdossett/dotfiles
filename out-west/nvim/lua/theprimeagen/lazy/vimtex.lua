@@ -13,17 +13,23 @@ return {
       callback = function()
         -- Function to insert align block and place cursor in the middle
         local function insert_align_block()
-          local align_block = "\\begin{align}\n\t&\n\\end{align}\n"
           local row, col = unpack(vim.api.nvim_win_get_cursor(0))
-          vim.api.nvim_put({align_block}, 'c', true, true)
-          vim.api.nvim_win_set_cursor(0, {row + 1, col + 8})
+          vim.api.nvim_buf_set_text(0, row - 1, col, row - 1, col, {
+            "\\begin{align}",
+            "\t&",
+            "\\end{align}",
+          })
+          vim.api.nvim_win_set_cursor(0, {row + 1, col + 1})
         end
 
         -- Function to insert equation block and place cursor in the middle
         local function insert_equation_block()
-          local equation_block = "\\begin{equation}\n\t\n\\end{equation}\n"
           local row, col = unpack(vim.api.nvim_win_get_cursor(0))
-          vim.api.nvim_put({equation_block}, 'c', true, true)
+          vim.api.nvim_buf_set_text(0, row - 1, col, row - 1, col, {
+            "\\begin{equation}",
+            "\t",
+            "\\end{equation}",
+          })
           vim.api.nvim_win_set_cursor(0, {row + 1, col + 1})
         end
 
@@ -61,7 +67,20 @@ return {
     -- Compile on write
     vim.api.nvim_create_autocmd('BufWritePost', {
       pattern = '*.tex',
-      command = 'VimtexCompile',
+      callback = function()
+        -- Ensure the VimtexCompile command is called correctly
+        vim.cmd('VimtexCompile')
+      end,
+    })
+
+    -- Clean up intermediate files after compilation
+    vim.api.nvim_create_autocmd('User', {
+      pattern = 'VimtexEventCompileSuccess',
+      callback = function()
+        local texfile = vim.fn.expand('%:p')
+        local cmd = 'latexmk -c -bibtex -silent -output-directory=build ' .. texfile
+        os.execute(cmd)
+      end,
     })
   end,
 }
